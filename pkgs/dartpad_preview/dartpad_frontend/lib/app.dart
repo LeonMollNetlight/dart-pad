@@ -69,6 +69,16 @@ class AppState extends State<App> {
       }
 
       setState(() {
+        loadingStatus = 'Running Pub Get...';
+      });
+
+      await _workspaceRepository.pubGet();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
         loadingStatus = 'Initializing Analyzer...';
       });
 
@@ -93,12 +103,6 @@ class AppState extends State<App> {
 
       _fileTree.languageServerClient = languageServerClient;
       _editorHost.attachLanguageServer(languageServerClient);
-
-      setState(() {
-        loadingStatus = 'Running Pub Get...';
-      });
-
-      await _workspaceRepository.pubGet();
 
       codemirrorAdapter.attachLanguageServerClient(languageServerClient);
 
