@@ -38,6 +38,8 @@ class AppState extends State<App> {
   late final FileTreeViewModel _fileTree;
   late final EditorHostViewModel _editorHost;
 
+  StreamSubscription<AnalyzerActivity>? _analyzerSubscription;
+
   String loadingStatus = 'Loading Workspace...';
 
   @override
@@ -101,19 +103,38 @@ class AppState extends State<App> {
         },
       );
 
+      _analyzerSubscription = languageServerClient.analyzerActivityStream.listen(
+        _updateAnalyzerStatus,
+      );
+
       _fileTree.languageServerClient = languageServerClient;
       _editorHost.attachLanguageServer(languageServerClient);
 
       codemirrorAdapter.attachLanguageServerClient(languageServerClient);
 
       setState(() {
-        loadingStatus = '';
+        loadingStatus = 'Analyzing Project...';
       });
     });
 
     Future(() async {
       await createSampleProject(_workspaceRepository.root);
       await openSampleProject(_tabs.openFile);
+    });
+  }
+
+  void _updateAnalyzerStatus(AnalyzerActivity activity) {
+    if (!mounted || activity is! AnalyzerStatusActivity) {
+      return;
+    }
+
+    final status = activity.isAnalyzing ? 'Analyzing Project...' : 'Done';
+    if (loadingStatus == status) {
+      return;
+    }
+
+    setState(() {
+      loadingStatus = status;
     });
   }
 
@@ -144,6 +165,7 @@ class AppState extends State<App> {
   }
 
   Future<void> _disposeResources() async {
+    await _analyzerSubscription?.cancel();
     _editorHost.dispose();
     _fileTree.dispose();
     _tabs.dispose();
